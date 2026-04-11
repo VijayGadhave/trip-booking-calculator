@@ -8,6 +8,7 @@ from booking import (
     calculate_tax,
     get_price_category,
     format_booking_summary,
+    calculate_final_price,
 )
 
 
@@ -85,3 +86,45 @@ def test_calculate_tax_unknown_country_raises():
     """Unknown country must raise ValueError."""
     with pytest.raises(ValueError):
         calculate_tax(500, "mars")
+
+
+# ── calculate_final_price Tests ───────────────────────────────────────────────
+
+def test_calculate_final_price_returns_correct_value():
+    """Happy path: $100/night, 3 nights, 2 guests, April (no discount), Japan (10% tax).
+
+    Total = 100 * 3 * 2 = 600. Discount = 0%. Tax = 60. Final = 660.
+    """
+    assert calculate_final_price(100, 3, 2, 4, "japan") == 660.0
+
+
+def test_calculate_final_price_applies_discount():
+    """January 15% discount should reduce the base before tax is applied.
+
+    Total = 100 * 2 * 1 = 200. Discounted = 170. Tax (USA 8%) = 13.6. Final = 183.6.
+    """
+    assert calculate_final_price(100, 2, 1, 1, "usa") == 183.6
+
+
+def test_calculate_final_price_invalid_nights_raises():
+    """nights=0 must propagate ValueError from calculate_total_price."""
+    with pytest.raises(ValueError):
+        calculate_final_price(100, 0, 2, 4, "japan")
+
+
+def test_calculate_final_price_invalid_guests_raises():
+    """guests=0 must propagate ValueError from calculate_total_price."""
+    with pytest.raises(ValueError):
+        calculate_final_price(100, 3, 0, 4, "japan")
+
+
+def test_calculate_final_price_invalid_month_raises():
+    """month=13 must propagate ValueError from apply_seasonal_discount."""
+    with pytest.raises(ValueError):
+        calculate_final_price(100, 3, 2, 13, "japan")
+
+
+def test_calculate_final_price_invalid_country_raises():
+    """Unsupported country must propagate ValueError from calculate_tax."""
+    with pytest.raises(ValueError):
+        calculate_final_price(100, 3, 2, 4, "mars")
