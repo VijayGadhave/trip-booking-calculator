@@ -129,7 +129,8 @@ def calculate_final_price(
         Final price after discount and tax as a float.
 
     Raises:
-        ValueError: If nights or guests is zero or less.
+        ValueError: If nights is zero or less.
+        ValueError: If guests is zero or less.
         ValueError: If month is not between 1 and 12.
         ValueError: If country is not in the supported list.
     """
