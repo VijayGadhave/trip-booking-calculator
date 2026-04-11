@@ -128,3 +128,73 @@ def test_calculate_final_price_invalid_country_raises():
     """Unsupported country must propagate ValueError from calculate_tax."""
     with pytest.raises(ValueError):
         calculate_final_price(100, 3, 2, 4, "mars")
+
+
+# ── Multi-currency Tests ──────────────────────────────────────────────────────
+
+def test_calculate_total_price_eur_conversion():
+    """EUR conversion: $600 USD * 0.92 = 552.0 EUR."""
+    assert calculate_total_price(100, 3, 2, "eur") == 552.0
+
+
+def test_calculate_total_price_gbp_conversion():
+    """GBP conversion: $600 USD * 0.79 = 474.0 GBP."""
+    assert calculate_total_price(100, 3, 2, "gbp") == 474.0
+
+
+def test_calculate_total_price_jpy_conversion():
+    """JPY conversion: $600 USD * 149.50 = 89700.0 JPY."""
+    assert calculate_total_price(100, 3, 2, "jpy") == 89700.0
+
+
+def test_calculate_total_price_invalid_currency_raises():
+    """Unsupported currency code must raise ValueError."""
+    with pytest.raises(ValueError):
+        calculate_total_price(100, 3, 2, "xyz")
+
+
+def test_calculate_final_price_eur():
+    """EUR final price: $100/night, 3 nights, 2 guests, April (no discount), Japan (10% tax).
+
+    Total USD = 600. EUR = 552.0. Tax (10%) = 55.2. Final = 607.2 EUR.
+    """
+    assert calculate_final_price(100, 3, 2, 4, "japan", "eur") == 607.2
+
+
+def test_calculate_final_price_jpy_rounds_to_whole_number():
+    """JPY final price must be a whole number (no decimal subdivision).
+
+    Total USD = 600. JPY = 89700. Tax (10%) = 8970. Final = 98670 JPY.
+    """
+    result = calculate_final_price(100, 3, 2, 4, "japan", "jpy")
+    assert result == int(result)
+
+
+def test_calculate_final_price_invalid_currency_raises():
+    """Unsupported currency must raise ValueError."""
+    with pytest.raises(ValueError):
+        calculate_final_price(100, 3, 2, 4, "japan", "xyz")
+
+
+def test_format_booking_summary_eur_symbol():
+    """EUR summary must display the € symbol."""
+    result = format_booking_summary("Alps Escape", "france", 607.2, 2, "eur")
+    assert "€" in result
+
+
+def test_format_booking_summary_gbp_symbol():
+    """GBP summary must display the £ symbol."""
+    result = format_booking_summary("London Tour", "usa", 500.0, 2, "gbp")
+    assert "£" in result
+
+
+def test_format_booking_summary_jpy_no_decimal():
+    """JPY summary must display prices with no decimal places."""
+    result = format_booking_summary("Tokyo Trip", "japan", 98670.0, 2, "jpy")
+    assert "¥98670" in result
+
+
+def test_format_booking_summary_invalid_currency_raises():
+    """Unsupported currency must raise ValueError."""
+    with pytest.raises(ValueError):
+        format_booking_summary("Test Trip", "france", 500.0, 2, "xyz")

@@ -24,26 +24,52 @@ TAX_RATES = {
     "australia": 0.10,
 }
 
+EXCHANGE_RATES = {
+    "usd": 1.0,
+    "eur": 0.92,
+    "gbp": 0.79,
+    "jpy": 149.50,
+}
 
-def calculate_total_price(base_price: float, nights: int, guests: int) -> float:
+CURRENCY_SYMBOLS = {
+    "usd": "$",
+    "eur": "€",
+    "gbp": "£",
+    "jpy": "¥",
+}
+
+
+def calculate_total_price(
+    base_price: float, nights: int, guests: int, currency: str = "usd"
+) -> float:
     """Calculate total booking price from base nightly rate.
 
     Args:
         base_price: Nightly rate per person in USD.
         nights: Number of nights to stay.
         guests: Number of guests.
+        currency: Target currency code, one of 'usd', 'eur', 'gbp', 'jpy'.
+            Defaults to 'usd'.
 
     Returns:
-        Total price as a float.
+        Total price converted to the requested currency as a float.
 
     Raises:
-        ValueError: If nights or guests is zero or less.
+        ValueError: If nights is zero or less.
+        ValueError: If guests is zero or less.
+        ValueError: If currency is not a supported currency code.
     """
     if nights <= 0:
         raise ValueError(f"nights must be greater than 0, got {nights}")
     if guests <= 0:
         raise ValueError(f"guests must be greater than 0, got {guests}")
-    return base_price * nights * guests
+    if currency.lower() not in EXCHANGE_RATES:
+        raise ValueError(
+            f"'{currency}' is not a supported currency. "
+            f"Supported: {list(EXCHANGE_RATES.keys())}"
+        )
+    total_usd = base_price * nights * guests
+    return total_usd * EXCHANGE_RATES[currency.lower()]
 
 
 def apply_seasonal_discount(price: float, month: int) -> float:
@@ -111,7 +137,8 @@ def get_price_category(total_price: float) -> str:
 
 
 def calculate_final_price(
-    base_price: float, nights: int, guests: int, month: int, country: str
+    base_price: float, nights: int, guests: int, month: int, country: str,
+    currency: str = "usd"
 ) -> float:
     """Calculate the complete final price including seasonal discount and tax.
 
@@ -124,24 +151,30 @@ def calculate_final_price(
         guests: Number of guests.
         month: Month of travel as an integer (1=January, 12=December).
         country: Destination country name in lowercase (e.g. 'france').
+        currency: Target currency code, one of 'usd', 'eur', 'gbp', 'jpy'.
+            Defaults to 'usd'.
 
     Returns:
-        Final price after discount and tax as a float.
+        Final price after discount and tax, converted to the requested currency.
+        JPY is rounded to a whole number; all other currencies to 2 decimal places.
 
     Raises:
         ValueError: If nights is zero or less.
         ValueError: If guests is zero or less.
         ValueError: If month is not between 1 and 12.
         ValueError: If country is not in the supported list.
+        ValueError: If currency is not a supported currency code.
     """
-    total = calculate_total_price(base_price, nights, guests)
+    total = calculate_total_price(base_price, nights, guests, currency)
     discounted = apply_seasonal_discount(total, month)
     tax = calculate_tax(discounted, country)
-    return round(discounted + tax, 2)
+    decimals = 0 if currency.lower() == "jpy" else 2
+    return round(discounted + tax, decimals)
 
 
 def format_booking_summary(trip_name: str, destination: str,
-                            total_price: float, guests: int) -> str:
+                            total_price: float, guests: int,
+                            currency: str = "usd") -> str:
     """Format a human-readable booking summary string.
 
     Args:
@@ -149,16 +182,29 @@ def format_booking_summary(trip_name: str, destination: str,
         destination: Destination country.
         total_price: Final total price including tax.
         guests: Number of guests.
+        currency: Currency code used for display, one of 'usd', 'eur', 'gbp',
+            'jpy'. Defaults to 'usd'.
 
     Returns:
-        A formatted multi-line booking summary string.
+        A formatted multi-line booking summary string with the correct
+        currency symbol.
+
+    Raises:
+        ValueError: If currency is not a supported currency code.
     """
+    if currency.lower() not in CURRENCY_SYMBOLS:
+        raise ValueError(
+            f"'{currency}' is not a supported currency. "
+            f"Supported: {list(CURRENCY_SYMBOLS.keys())}"
+        )
+    symbol = CURRENCY_SYMBOLS[currency.lower()]
+    decimals = 0 if currency.lower() == "jpy" else 2
     price_per_person = total_price / guests
     return (
         f"Booking Summary\n"
         f"  Trip:             {trip_name}\n"
         f"  Destination:      {destination}\n"
-        f"  Total price:      ${total_price:.2f}\n"
+        f"  Total price:      {symbol}{total_price:.{decimals}f}\n"
         f"  Guests:           {guests}\n"
-        f"  Price per person: ${price_per_person:.2f}"
+        f"  Price per person: {symbol}{price_per_person:.{decimals}f}"
     )
